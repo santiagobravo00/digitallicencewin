@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
   Script de Instalación de Packs personalizado para entornos Enterprise.
-  Se auto-eleva a Administrador y se ejecuta en una nueva ventana con un estilo llamativo,
-  manteniendo la ventana abierta al finalizar el script.
+  DEBE EJECUTARSE COMO ADMINISTRADOR.
+.DESCRIPTION
+  Instala Google Chrome (Estándar Standalone) y Brave Browser de forma silenciosa.
 #>
 
 function Show-Menu {
-    # ... (Esta función permanece sin cambios) ...
     param(
         [Parameter(Mandatory=$true)]
         [Hashtable]$Applications
@@ -33,7 +33,6 @@ function Show-Menu {
 }
 
 function Invoke-SilentInstall {
-    # ... (Esta función permanece sin cambios) ...
     param(
         [Parameter(Mandatory=$true)]
         [string]$DownloadUrl,
@@ -69,7 +68,7 @@ function Invoke-SilentInstall {
         Write-Host "✅ $($FriendlyName) se instaló con ÉXITO." -ForegroundColor Green
     }
     catch {
-        Write-Host "⚠️ Fallo al ejecutar el instalador de $($FriendlyName). Revisa los permisos o la ruta." -ForegroundColor Yellow
+        Write-Host "⚠️ Fallo al ejecutar el instalador de $($FriendlyName). Verifica los argumentos o el estado de la instalación." -ForegroundColor Yellow
     }
     
     # 3. Limpieza: Eliminar el instalador
@@ -81,15 +80,19 @@ function Invoke-SilentInstall {
     Write-Host "---" -ForegroundColor DarkGray
 }
 
+# --- FUNCIÓN PRINCIPAL DE EJECUCIÓN ---
 function Start-InstallerPacks {
-    # 1. Comprobación de Administrador y Auto-Elevación
+    
+    # 1. Comprobación de Administrador
     if (-not ([Security.Principal.WindowsIdentity]::GetCurrent().Groups -match 'S-1-5-32-544')) {
-        Write-Host "⚠️ Ejecutando elevación de permisos (RunAs)..." -ForegroundColor Yellow
-        $scriptPath = $MyInvocation.MyCommand.Path
-        
-        # 🟢 CORRECCIÓN APLICADA AQUÍ: Agregamos -NoExit
-        $CommandArgs = "-NoExit -File `"$scriptPath`" -elevated"
-        Start-Process -FilePath 'powershell.exe' -ArgumentList $CommandArgs -Verb RunAs
+        Clear-Host
+        Write-Host "=========================================================" -ForegroundColor Red
+        Write-Host "             🚨 ACCESO DENEGADO 🚨" -ForegroundColor White -BackgroundColor Red
+        Write-Host "=========================================================" -ForegroundColor Red
+        Write-Host "Este script DEBE ejecutarse como Administrador." -ForegroundColor Yellow
+        Write-Host "Por favor, inicia PowerShell (o el símbolo del sistema) con permisos elevados." -ForegroundColor Cyan
+        Write-Host "Pulsa Enter para salir."
+        Read-Host
         exit
     }
     
@@ -116,7 +119,6 @@ function Start-InstallerPacks {
         }
     }
 
-    # Lógica de menú y ejecución
     $FriendlyNames = @{}
     $AppList.GetEnumerator() | ForEach-Object { $FriendlyNames[$_.Key] = $_.Value.Name }
     $ApplicationUrls = $AppList.Keys | Sort-Object
@@ -125,11 +127,11 @@ function Start-InstallerPacks {
         $Selection = Show-Menu -Applications $FriendlyNames
 
         if ($Selection -eq 'S' -or $Selection -eq 's') {
-            Write-Host "👋 Saliendo del script. ¡Hasta pronto!" -ForegroundColor Red
+            Write-Host "👋 Saliendo del menú." -ForegroundColor Red
             break
         }
         
-        # ... (Lógica de selección de aplicaciones) ...
+        # Lógica de selección de aplicaciones
         $AppsToInstallUrls = @()
         if ($Selection -eq 'A' -or $Selection -eq 'a') {
             $AppsToInstallUrls = $ApplicationUrls
@@ -164,11 +166,7 @@ function Start-InstallerPacks {
 }
 
 # Ejecuta la función principal
-if ($MyInvocation.MyCommand.Path) {
-    Start-InstallerPacks
-} else {
-    Write-Host " "
-    Write-Host "⚠️ ADVERTENCIA: Ejecutar con 'irm | iex' no permite la auto-elevación. Debe ejecutar PowerShell COMO ADMINISTRADOR primero." -ForegroundColor Yellow
-    Write-Host " "
-    Start-InstallerPacks
-}
+Start-InstallerPacks
+
+# Aseguramos que la ventana no se cierre si el script se llama de forma interactiva (aunque no es necesario por el bucle while)
+# La ventana permanece abierta gracias al bucle while($true) en Start-InstallerPacks.
